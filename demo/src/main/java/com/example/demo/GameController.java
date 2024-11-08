@@ -2,10 +2,13 @@ package com.example.demo;
 
 import com.example.demo.models.Player;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,45 +18,52 @@ public class GameController extends TextWebSocketHandler {
 
     private final SimpMessagingTemplate messagingTemplate;
 
-    // Liste des joueurs connectés avec leurs identifiants et leurs informations
     private final Map<String, Player> players = new ConcurrentHashMap<>();
+    private final Map<String, String> sessionToPseudoMap = new ConcurrentHashMap<>();
 
     @Autowired
     public GameController(SimpMessagingTemplate messagingTemplate) {
         this.messagingTemplate = messagingTemplate;
     }
 
-    @Override
-    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+    @MessageMapping("/connect")
+    public void connect(Map<String, String> message, SimpMessageHeaderAccessor headerAccessor) {
+        String pseudo = message.get("pseudo");
 
-        // Créer un joueur avec des positions par défaut
-        Player newPlayer = new Player(100, 100); // Position initiale (100, 100)
+        Player newPlayer = new Player(pseudo, 100, 100);
+        players.put(pseudo, newPlayer);
 
-        // Ajouter le joueur dans la liste des joueurs connectés
-        players.put(newPlayer.getId(), newPlayer);
+        String sessionId = headerAccessor.getSessionId();
+        sessionToPseudoMap.put(sessionId, pseudo);
 
-        // Envoyer la liste complète des joueurs aux clients
-        messagingTemplate.convertAndSend("/topic/movements", players);
-
-        System.out.println("Un nouveau joueur s'est connecté : " + newPlayer.getId());
+        messagingTemplate.convertAndSend("/topic/connect", players);
+        System.out.println("Un nouveau joueur s'est connecté : " + pseudo);
     }
 
-    // Méthode pour gérer la déconnexion d'un joueur
-    public void afterConnectionClosed(WebSocketSession session, org.springframework.web.socket.CloseStatus status) {
-        String playerId = session.getId();
 
-        // Supprimer le joueur de la liste
-        players.remove(playerId);
-        System.out.println("Le joueur " + playerId + " a quitté.");
-    }
-
-    // Méthode pour déplacer un joueur
+    @MessageMapping("/move")
     public void movePlayer(Player player) {
-        // Mettre à jour la position du joueur
-        players.put(player.getId(), player);
-
-        // Envoyer la mise à jour à tous les joueurs
+        players.put(player.getPseudo(), player);
         messagingTemplate.convertAndSend("/topic/movements", players);
+    }
+
+    @MessageMapping("/getAll")
+    public void getAll() {
+        messagingTemplate.convertAndSend("/topic/getAll", players);
+    }
+
+    @EventListener
+    public void handleDisconnectEvent(SessionDisconnectEvent event) {
+        String sessionId = event.getSessionId();
+        String pseudo = sessionToPseudoMap.get(sessionId);
+
+        if (pseudo != null) {
+            players.entrySet().removeIf(entry -> entry.getValue().getPseudo().equals(pseudo));
+            sessionToPseudoMap.remove(sessionId);
+
+            messagingTemplate.convertAndSend("/topic/disconnect", pseudo);
+            System.out.println("Le joueur " + pseudo + " a quitté.");
+        }
     }
 }
 

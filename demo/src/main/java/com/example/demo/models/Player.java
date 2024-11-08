@@ -4,14 +4,16 @@ import java.util.UUID;
 
 public class Player {
     private String id;
+    private String pseudo;
     private Position position;
 
     // Constructeurs, getters et setters
     public Player() {
     }
 
-    public Player(int positionX, int positionY) {
+    public Player(String pseudo, int positionX,  int positionY) {
         this.id = UUID.randomUUID().toString();
+        this.pseudo = pseudo;
         this.position = new Position(positionX, positionY);
     }
 
@@ -25,5 +27,13 @@ public class Player {
 
     public String getId() {
         return id;
+    }
+
+    public String getPseudo() {
+        return pseudo;
+    }
+
+    public void setPseudo(String pseudo) {
+        this.pseudo = pseudo;
     }
 }
