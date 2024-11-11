@@ -6,18 +6,23 @@ import org.springframework.context.event.EventListener;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Controller
+@RestController
+@RequestMapping("/api/player")
 public class GameController extends TextWebSocketHandler {
 
     private final SimpMessagingTemplate messagingTemplate;
-
     private final Map<String, Player> players = new ConcurrentHashMap<>();
     private final Map<String, String> sessionToPseudoMap = new ConcurrentHashMap<>();
 
@@ -40,16 +45,15 @@ public class GameController extends TextWebSocketHandler {
         System.out.println("Un nouveau joueur s'est connecté : " + pseudo);
     }
 
-
     @MessageMapping("/move")
     public void movePlayer(Player player) {
         players.put(player.getPseudo(), player);
         messagingTemplate.convertAndSend("/topic/movements", players);
     }
 
-    @MessageMapping("/getAll")
-    public void getAll() {
-        messagingTemplate.convertAndSend("/topic/getAll", players);
+    @GetMapping("/getAll")
+    public Set<String> getAll() {
+        return players.keySet();
     }
 
     @EventListener
@@ -66,4 +70,3 @@ public class GameController extends TextWebSocketHandler {
         }
     }
 }
-

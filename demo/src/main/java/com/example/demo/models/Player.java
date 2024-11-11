@@ -7,7 +7,6 @@ public class Player {
     private String pseudo;
     private Position position;
 
-    // Constructeurs, getters et setters
     public Player() {
     }
 

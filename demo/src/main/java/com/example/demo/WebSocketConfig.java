@@ -12,15 +12,19 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.enableSimpleBroker("/topic"); // Préfixe pour les destinations sortantes
-        config.setApplicationDestinationPrefixes("/app"); // Préfixe pour les messages entrants
+        config.enableSimpleBroker("/topic");
+        config.setApplicationDestinationPrefixes("/app");
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws")
-                .setAllowedOrigins("http://localhost:5173")
-                .setAllowedOrigins("http://192.168.1.222:8081")
+        registry
+                .addEndpoint("/ws")
+                .setAllowedOrigins(
+                        "http://localhost:8081",
+                        "http://192.168.1.222:8081",
+                        "https://3ec7-2a01-cb01-861-8b10-fce9-d8a3-60c8-a19d.ngrok-free.app"
+                )
                 .withSockJS();
     }
 }
